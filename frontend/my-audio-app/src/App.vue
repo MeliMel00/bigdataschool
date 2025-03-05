@@ -5,6 +5,7 @@ const file = ref(null);
 const transcription = ref('');
 const downloadUrl = ref('');
 
+// Fonction pour télécharger et transcrire le fichier
 const uploadFile = async () => {
   if (!file.value) {
     alert("Sélectionnez un fichier audio.");
@@ -20,7 +21,7 @@ const uploadFile = async () => {
       body: formData,
     });
     const data = await response.json();
-    transcription.value = data.transcription;
+    transcription.value = data.transcription;  // Afficher la transcription corrigée
 
     // Créer un lien de téléchargement
     const blob = new Blob([transcription.value], { type: "text/plain" });

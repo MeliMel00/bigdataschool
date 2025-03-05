@@ -5,6 +5,7 @@ import torch
 from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor
 import librosa
 import numpy as np
+import language_tool_python  # Import de la bibliothèque LanguageTool
 
 app = Flask(__name__)
 CORS(app)  # Activation du CORS pour autoriser les requêtes du frontend
@@ -13,6 +14,9 @@ CORS(app)  # Activation du CORS pour autoriser les requêtes du frontend
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+# Initialisation de LanguageTool pour l'anglais
+tool = language_tool_python.LanguageTool('en-US')
+
 class AudioTranscriber:
     def __init__(self, model_name="facebook/wav2vec2-base-960h"):
         """
@@ -20,7 +24,7 @@ class AudioTranscriber:
         """
         # Charger le processeur et le modèle
         self.processor = Wav2Vec2Processor.from_pretrained(model_name)
-        self.model = Wav2Vec2ForCTC.from_pretrained(model_name, ignore_mismatched_sizes=True)
+        self.model = Wav2Vec2ForCTC.from_pretrained(model_name)
     
     def transcribe_audio(self, audio_path):
         """
@@ -44,6 +48,12 @@ class AudioTranscriber:
         transcription = self.processor.batch_decode(predicted_ids)[0]
         
         return transcription
+
+# Fonction pour corriger le texte
+def correct_text(text):
+    matches = tool.check(text)  # Vérifie les erreurs dans le texte
+    corrected_text = language_tool_python.utils.correct(text, matches)  # Applique les corrections
+    return corrected_text
 
 # Initialiser le transcripteur
 transcriber = AudioTranscriber()
@@ -69,10 +79,13 @@ def upload_file():
         # Transcrire le fichier
         transcription = transcriber.transcribe_audio(filepath)
         
+        # Corriger la transcription
+        corrected_transcription = correct_text(transcription)
+        
         # Supprimer le fichier après transcription
         os.remove(filepath)
         
-        return jsonify({"transcription": transcription})
+        return jsonify({"transcription": corrected_transcription})
     
     except Exception as e:
         # Gérer les erreurs de transcription
